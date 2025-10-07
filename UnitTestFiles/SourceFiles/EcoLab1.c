@@ -29,6 +29,7 @@
 #include <time.h>
 #include <string.h>
 
+#define MAX_ARRAY_SIZE 5000000
 #define LARGE_ARRAY_SIZE 100000
 
 int16_t ECOCALLMETHOD comp_int(const void* a, const void* b) {
@@ -72,6 +73,9 @@ int16_t EcoMain(IEcoUnknown* pIUnk) {
     clock_t start, end;
     double cpu_time_used;
     int i;
+    int sizes[] = {100000, 500000, 1000000, 2000000, 3000000, 5000000};
+    int num_sizes = sizeof(sizes) / sizeof(sizes[0]);
+    int s_idx;
 
     /* Тестовые наборы данных */
     int arr_random[] = { 5, 2, 8, 1, 9, 4 };
@@ -148,32 +152,78 @@ int16_t EcoMain(IEcoUnknown* pIUnk) {
     pIEcoLab1->pVTbl->qsort(pIEcoLab1, arr_same_copy, 6, sizeof(int), comp_int);
     printf("Same elements array test: %s\n", memcmp(arr_same_copy, expected_same, sizeof(expected_same)) == 0 ? "PASS" : "FAIL");
 
+    printf("\n--- Performance Tests ---\n");
 
-    printf("\n--- Performance Test (sorting %d elements) ---\n", LARGE_ARRAY_SIZE);
-
-    /* Создание и заполнение большого массива */
-    arr_large = (int*)pIMem->pVTbl->Alloc(pIMem, LARGE_ARRAY_SIZE * sizeof(int));
-    arr_large_copy = (int*)pIMem->pVTbl->Alloc(pIMem, LARGE_ARRAY_SIZE * sizeof(int));
-    srand((unsigned int)time(NULL));
-    for (i = 0; i < LARGE_ARRAY_SIZE; i++) {
-        arr_large[i] = rand();
+    arr_large = (int*)pIMem->pVTbl->Alloc(pIMem, MAX_ARRAY_SIZE * sizeof(int));
+    arr_large_copy = (int*)pIMem->pVTbl->Alloc(pIMem, MAX_ARRAY_SIZE * sizeof(int));
+    if (!arr_large || !arr_large_copy) {
+        printf("Memory allocation for large arrays failed!\n");
+        goto Release;
     }
 
-    /* Замер времени для вашей реализации qsort */
-    memcpy(arr_large_copy, arr_large, LARGE_ARRAY_SIZE * sizeof(int));
-    start = clock();
-    pIEcoLab1->pVTbl->qsort(pIEcoLab1, arr_large_copy, LARGE_ARRAY_SIZE, sizeof(int), comp_int);
-    end = clock();
-    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC * 1000.0;
-    printf("Custom qsort time: %f ms\n", cpu_time_used);
+    srand((unsigned int)time(NULL));
 
-    /* Замер времени для стандартной qsort */
-    memcpy(arr_large_copy, arr_large, LARGE_ARRAY_SIZE * sizeof(int));
-    start = clock();
-    qsort(arr_large_copy, LARGE_ARRAY_SIZE, sizeof(int), comp_int_std);
-    end = clock();
-    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC * 1000.0;
-    printf("Standard qsort time: %f ms\n", cpu_time_used);
+    for (s_idx = 0; s_idx < num_sizes; ++s_idx) {
+        int current_size = sizes[s_idx];
+        printf("\nSorting %d elements:\n", current_size);
+
+        // --- Random Array ---
+        for (i = 0; i < current_size; i++) {
+            arr_large[i] = rand();
+        }
+        printf("  Random array:\n");
+        memcpy(arr_large_copy, arr_large, current_size * sizeof(int));
+        start = clock();
+        pIEcoLab1->pVTbl->qsort(pIEcoLab1, arr_large_copy, current_size, sizeof(int), comp_int);
+        end = clock();
+        cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC * 1000.0;
+        printf("    Custom qsort time: %f ms\n", cpu_time_used);
+
+        memcpy(arr_large_copy, arr_large, current_size * sizeof(int));
+        start = clock();
+        qsort(arr_large_copy, current_size, sizeof(int), comp_int_std);
+        end = clock();
+        cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC * 1000.0;
+        printf("    Standard qsort time: %f ms\n", cpu_time_used);
+
+        // --- Sorted Array ---
+        for (i = 0; i < current_size; i++) {
+            arr_large[i] = i; // Already sorted
+        }
+        printf("  Sorted array:\n");
+        memcpy(arr_large_copy, arr_large, current_size * sizeof(int));
+        start = clock();
+        pIEcoLab1->pVTbl->qsort(pIEcoLab1, arr_large_copy, current_size, sizeof(int), comp_int);
+        end = clock();
+        cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC * 1000.0;
+        printf("    Custom qsort time: %f ms\n", cpu_time_used);
+
+        memcpy(arr_large_copy, arr_large, current_size * sizeof(int));
+        start = clock();
+        qsort(arr_large_copy, current_size, sizeof(int), comp_int_std);
+        end = clock();
+        cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC * 1000.0;
+        printf("    Standard qsort time: %f ms\n", cpu_time_used);
+
+        // --- Reversed Array ---
+        for (i = 0; i < current_size; i++) {
+            arr_large[i] = current_size - 1 - i; // Reversed sorted
+        }
+        printf("  Reversed array:\n");
+        memcpy(arr_large_copy, arr_large, current_size * sizeof(int));
+        start = clock();
+        pIEcoLab1->pVTbl->qsort(pIEcoLab1, arr_large_copy, current_size, sizeof(int), comp_int);
+        end = clock();
+        cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC * 1000.0;
+        printf("    Custom qsort time: %f ms\n", cpu_time_used);
+
+        memcpy(arr_large_copy, arr_large, current_size * sizeof(int));
+        start = clock();
+        qsort(arr_large_copy, current_size, sizeof(int), comp_int_std);
+        end = clock();
+        cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC * 1000.0;
+        printf("    Standard qsort time: %f ms\n", cpu_time_used);
+    }
 	getchar();
 
     result = 0;
