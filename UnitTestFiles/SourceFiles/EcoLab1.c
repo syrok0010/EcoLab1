@@ -28,6 +28,12 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
+#include "IdEcoCalculatorA.h"
+#include "IdEcoCalculatorB.h"
+#include "IdEcoCalculatorD.h"
+#include "IdEcoCalculatorE.h"
+#include "IEcoCalculatorX.h"
+#include "IEcoCalculatorY.h"
 
 #define MAX_ARRAY_SIZE 5000000
 #define LARGE_ARRAY_SIZE 100000
@@ -76,8 +82,15 @@ int16_t EcoMain(IEcoUnknown* pIUnk) {
     int sizes[] = {100000, 500000, 1000000, 2000000, 3000000, 5000000};
     int num_sizes = sizeof(sizes) / sizeof(sizes[0]);
     int s_idx;
-
-    /* Тестовые наборы данных */
+    IEcoCalculatorX* pIX = 0;
+    IEcoCalculatorY* pIY = 0;
+    int32_t comp_result = 0;
+	IEcoLab1* temp_pIEcoLab1 = 0;
+    IEcoCalculatorX* temp_pIX_Test = 0;
+    IEcoCalculatorY* temp_pIY_Test = 0;
+	int op_res;
+    
+	/* Тестовые наборы данных */
     int arr_random[] = { 5, 2, 8, 1, 9, 4 };
     int arr_sorted[] = { 1, 2, 4, 5, 8, 9 };
     int arr_reversed[] = { 9, 8, 5, 4, 2, 1 };
@@ -122,11 +135,41 @@ int16_t EcoMain(IEcoUnknown* pIUnk) {
     if (result != 0 ) {
         goto Release;
     }
+		result = pIBus->pVTbl->RegisterComponent(pIBus, &CID_EcoCalculatorB, (IEcoUnknown*)GetIEcoComponentFactoryPtr_AE202E543CE54550899603BD70C62565);
+    if (result != 0) {
+        /* Освобождение в случае ошибки */
+        goto Release;
+    }
+    result = pIBus->pVTbl->RegisterComponent(pIBus, &CID_EcoCalculatorA, (IEcoUnknown*)GetIEcoComponentFactoryPtr_4828F6552E4540E78121EBD220DC360E);
+    if (result != 0) {
+        /* Освобождение в случае ошибки */
+        goto Release;
+    }
+    result = pIBus->pVTbl->RegisterComponent(pIBus, &CID_EcoCalculatorD, (IEcoUnknown*)GetIEcoComponentFactoryPtr_3A8E44677E82475CB4A3719ED8397E61);
+    if (result != 0) {
+        /* Освобождение в случае ошибки */
+        goto Release;
+    }
+    result = pIBus->pVTbl->RegisterComponent(pIBus, &CID_EcoCalculatorE, (IEcoUnknown*)GetIEcoComponentFactoryPtr_872FEF1DE3314B87AD44D1E7C232C2F0);
+    if (result != 0) {
+        /* Освобождение в случае ошибки */
+        goto Release;
+    }
 #endif
 
     /* Получение тестируемого интерфейса */
     result = pIBus->pVTbl->QueryComponent(pIBus, &CID_EcoLab1, 0, &IID_IEcoLab1, (void**) &pIEcoLab1);
     if (result != 0 || pIEcoLab1 == 0) {
+        goto Release;
+    }
+	
+	result = pIEcoLab1->pVTbl->QueryInterface(pIEcoLab1, &IID_IEcoCalculatorX, (void**)&pIX);
+    if (result != 0 || pIX == 0) {
+        goto Release;
+    }
+
+    result = pIEcoLab1->pVTbl->QueryInterface(pIEcoLab1, &IID_IEcoCalculatorY, (void**)&pIY);
+    if (result != 0 || pIY == 0) {
         goto Release;
     }
 
@@ -224,9 +267,82 @@ int16_t EcoMain(IEcoUnknown* pIUnk) {
         cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC * 1000.0;
         printf("    Standard qsort time: %f ms\n", cpu_time_used);
     }
-	getchar();
 
     result = 0;
+    printf("\n===== Verification of Component Interfaces =====\n");
+    printf("--- Part 1: Interface Accessibility Checks ---\n");
+
+    result = pIEcoLab1->pVTbl->QueryInterface(pIEcoLab1, &IID_IEcoCalculatorX, (void**)&temp_pIX_Test);
+    printf("Check [IEcoLab1 => IEcoCalculatorX]: %s\n", (result == 0) ? "Ok" : "Fail");
+    if (temp_pIX_Test) temp_pIX_Test->pVTbl->Release(temp_pIX_Test);
+
+    result = pIEcoLab1->pVTbl->QueryInterface(pIEcoLab1, &IID_IEcoCalculatorY, (void**)&temp_pIY_Test);
+    printf("Check [IEcoLab1 => IEcoCalculatorY]: %s\n", (result == 0) ? "Ok" : "Fail");
+    if (temp_pIY_Test) temp_pIY_Test->pVTbl->Release(temp_pIY_Test);
+
+	result = pIEcoLab1->pVTbl->QueryInterface(pIEcoLab1, &IID_IEcoCalculatorY, (void**)&temp_pIEcoLab1);
+    printf("Check [IEcoLab1 => IEcoCalculatorY]: %s\n", (result == 0) ? "Ok" : "Fail");
+    if (temp_pIY_Test) temp_pIEcoLab1->pVTbl->Release(temp_pIEcoLab1);
+
+    printf("\n--- Part 2: Cross-Interface QI Checks ---\n");
+
+    result = pIX->pVTbl->QueryInterface(pIX, &IID_IEcoCalculatorY, (void**)&temp_pIY_Test);
+    printf("Check [IEcoCalculatorX => IEcoCalculatorY]: %s\n", (result == 0) ? "Ok" : "Fail");
+    if (temp_pIY_Test) temp_pIY_Test->pVTbl->Release(temp_pIY_Test);
+
+    result = pIX->pVTbl->QueryInterface(pIX, &IID_IEcoLab1, (void**)&temp_pIEcoLab1);
+    printf("Check [IEcoCalculatorX => IEcoLab1]: %s\n", (result == 0) ? "Ok" : "Fail");
+    if (temp_pIEcoLab1) temp_pIEcoLab1->pVTbl->Release(temp_pIEcoLab1);
+
+	result = pIX->pVTbl->QueryInterface(pIX, &IID_IEcoCalculatorX, (void**)&temp_pIX_Test);
+    printf("Check [IEcoCalculatorX => IEcoCalculatorX]: %s\n", (result == 0) ? "Ok" : "Fail");
+    if (temp_pIX_Test) temp_pIX_Test->pVTbl->Release(temp_pIX_Test);
+
+    result = pIY->pVTbl->QueryInterface(pIY, &IID_IEcoCalculatorX, (void**)&temp_pIX_Test);
+    printf("Check [IEcoCalculatorY => IEcoCalculatorX]: %s\n", (result == 0) ? "Ok" : "Fail");
+    if (temp_pIX_Test) temp_pIX_Test->pVTbl->Release(temp_pIX_Test);
+    
+    result = pIY->pVTbl->QueryInterface(pIY, &IID_IEcoLab1, (void**)&temp_pIEcoLab1);
+    printf("Check [IEcoCalculatorY => IEcoLab1]: %s\n", (result == 0) ? "Ok" : "Fail");
+    if (temp_pIEcoLab1) temp_pIEcoLab1->pVTbl->Release(temp_pIEcoLab1);
+
+    result = pIY->pVTbl->QueryInterface(pIY, &IID_IEcoCalculatorY, (void**)&temp_pIY_Test);
+    printf("Check [IEcoCalculatorY => IEcoCalculatorY]: %s\n", (result == 0) ? "Ok" : "Fail");
+    if (temp_pIY_Test) temp_pIY_Test->pVTbl->Release(temp_pIY_Test);
+
+    printf("\n--- Part 3: Arithmetic Functionality Tests ---\n");
+    
+    op_res = pIX->pVTbl->Addition(pIX, 7, 8);
+    if (op_res == 15) {
+        printf("Operation [Addition 7+8]: Correct. Result = %d\n", op_res);
+    } else {
+        printf("Operation [Addition 7+8]: FAILED. Got %d, Expected 15\n", op_res);
+    }
+    
+    op_res = pIX->pVTbl->Subtraction(pIX, 20, 5);
+	if (op_res == 15) {
+        printf("Operation [Subtraction 20-5]: Correct. Result = %d\n", op_res);
+    } else {
+        printf("Operation [Subtraction 20-5]: FAILED. Got %d, Expected 15\n", op_res);
+    }
+
+    op_res = pIY->pVTbl->Multiplication(pIY, 4, 6);
+	if (op_res == 24) {
+        printf("Operation [Multiplication 4*6]: Correct. Result = %d\n", op_res);
+    } else {
+        printf("Operation [Multiplication 4*6]: FAILED. Got %d, Expected 24\n", op_res);
+    }
+
+    op_res = pIY->pVTbl->Division(pIY, 50, 10);
+	if (op_res == 5) {
+        printf("Operation [Division 50/10]: Correct. Result = %d\n", op_res);
+    } else {
+        printf("Operation [Division 50/10]: FAILED. Got %d, Expected 5\n", op_res);
+    }
+
+    printf("\n===== Component Verification Finished =====\n\n");
+
+	getchar();
 
 Release:
 
