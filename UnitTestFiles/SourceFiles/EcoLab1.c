@@ -33,6 +33,10 @@
 #include "IdEcoCalculatorD.h"
 #include "IdEcoCalculatorE.h"
 #include "IEcoCalculatorX.h"
+#include "IEcoConnectionPointContainer.h"
+#include "IEcoLab1Events.h"
+#include "CEcoLab1Sink.h"
+#include "CEcoLab1Sink2.h"
 #include "IEcoCalculatorY.h"
 
 #define MAX_ARRAY_SIZE 5000000
@@ -89,6 +93,14 @@ int16_t EcoMain(IEcoUnknown* pIUnk) {
     IEcoCalculatorX* temp_pIX_Test = 0;
     IEcoCalculatorY* temp_pIY_Test = 0;
 	int op_res;
+	IEcoConnectionPointContainer* pICPC = 0;
+    IEcoConnectionPoint* pICP = 0;
+    IEcoLab1Events* pIEcoLab1Sink = 0;
+    IEcoLab1Events* pIEcoLab1Sink2 = 0;
+    IEcoUnknown* pISinkUnk = 0;
+	IEcoUnknown* pISinkUnk2 = 0;
+    uint32_t cAdvise = 0;
+	uint32_t cAdvise2 = 0;
     
 	/* Тестовые наборы данных */
     int arr_random[] = { 5, 2, 8, 1, 9, 4 };
@@ -171,6 +183,38 @@ int16_t EcoMain(IEcoUnknown* pIUnk) {
     result = pIEcoLab1->pVTbl->QueryInterface(pIEcoLab1, &IID_IEcoCalculatorY, (void**)&pIY);
     if (result != 0 || pIY == 0) {
         goto Release;
+    }
+
+    result = pIEcoLab1->pVTbl->QueryInterface(pIEcoLab1, &IID_IEcoConnectionPointContainer, (void **)&pICPC);
+    
+    if (result == 0 && pICPC != 0) {
+        result = pICPC->pVTbl->FindConnectionPoint(pICPC, &IID_IEcoLab1Events, &pICP);
+        
+        pICPC->pVTbl->Release(pICPC);
+
+
+        if (result == 0 && pICP != 0) {
+
+            result = createCEcoLab1Sink(pIMem, &pIEcoLab1Sink);
+            if (result == 0 && pIEcoLab1Sink != 0) {
+                pIEcoLab1Sink->pVTbl->QueryInterface(pIEcoLab1Sink, &IID_IEcoUnknown, (void **)&pISinkUnk);
+                if (result == 0 && pISinkUnk != 0) {
+                    result = pICP->pVTbl->Advise(pICP, pISinkUnk, &cAdvise);
+                    printf("Sink 1 (Logger) connected.\n");
+                    pISinkUnk->pVTbl->Release(pISinkUnk);
+                }
+            }
+
+            result = createCEcoLab1Sink2(pIMem, &pIEcoLab1Sink2);
+            if (result == 0 && pIEcoLab1Sink2 != 0) {
+                pIEcoLab1Sink2->pVTbl->QueryInterface(pIEcoLab1Sink2, &IID_IEcoUnknown, (void **)&pISinkUnk2);
+                if (result == 0 && pISinkUnk2 != 0) {
+                    result = pICP->pVTbl->Advise(pICP, pISinkUnk2, &cAdvise2);
+                    printf("Sink 2 (Visualizer) connected.\n");
+                    pISinkUnk2->pVTbl->Release(pISinkUnk2);
+                }
+            }
+        }
     }
 
     printf("--- Functional Tests ---\n");
@@ -345,6 +389,18 @@ int16_t EcoMain(IEcoUnknown* pIUnk) {
 	getchar();
 
 Release:
+
+	if (pICP != 0) {
+        if (cAdvise != 0) {
+            pICP->pVTbl->Unadvise(pICP, cAdvise);
+        }
+        pICP->pVTbl->Release(pICP);
+    }
+    
+    /* Удаляем приемник */
+    if (pIEcoLab1Sink != 0) {
+        pIEcoLab1Sink->pVTbl->Release(pIEcoLab1Sink);
+    }
 
     /* Освобождение памяти */
     if (pIMem != 0) {
