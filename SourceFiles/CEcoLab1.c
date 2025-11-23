@@ -298,7 +298,7 @@ int16_t ECOCALLMETHOD CEcoLab1_Fire_OnProcessStart(CEcoLab1* pCMe, const void* s
     return result;
 }
 
-int16_t ECOCALLMETHOD CEcoLab1_Fire_OnPutElement(CEcoLab1* pCMe, uint32_t index, const void* val_ptr) {
+int16_t ECOCALLMETHOD CEcoLab1_Fire_OnArrayChange(CEcoLab1* pCMe, uint32_t index, const void* val_ptr, const void* arr_ptr, uint32_t count) {
     int16_t result = 0;
     IEcoEnumConnections* pEnum = 0;
     IEcoLab1Events* pIEvents = 0;
@@ -312,7 +312,7 @@ int16_t ECOCALLMETHOD CEcoLab1_Fire_OnPutElement(CEcoLab1* pCMe, uint32_t index,
         while (pEnum->pVTbl->Next(pEnum, 1, &cd, 0) == 0) {
             result = cd.pUnk->pVTbl->QueryInterface(cd.pUnk, &IID_IEcoLab1Events, (void**)&pIEvents);
             if ((result == 0) && (pIEvents != 0)) {
-                pIEvents->pVTbl->OnPutElement(pIEvents, index, val_ptr);
+                pIEvents->pVTbl->OnArrayChange(pIEvents, index, val_ptr, arr_ptr, count);
                 pIEvents->pVTbl->Release(pIEvents);
             }
             cd.pUnk->pVTbl->Release(cd.pUnk);
@@ -322,33 +322,34 @@ int16_t ECOCALLMETHOD CEcoLab1_Fire_OnPutElement(CEcoLab1* pCMe, uint32_t index,
     return result;
 }
 
-void insertionSort(CEcoLab1* pCMe, IEcoMemoryAllocator1* pIMem, char* base, size_t nitems, size_t size, int16_t (*compar)(const void*, const void*), char* global_base) {
-    size_t i, j;
-    size_t global_idx; /* C89: переменная в начале блока */
+void insertionSort(CEcoLab1* pCMe, IEcoMemoryAllocator1* pIMem, char* base, size_t nitems, size_t size, int16_t (*compar)(const void*, const void*), char* global_base, size_t total_count) {
+    size_t i;
+    int j;
+    size_t global_idx;
     char* key = (char*)pIMem->pVTbl->Alloc(pIMem, size);
-    
+
     for (i = 1; i < nitems; i++) {
         pIMem->pVTbl->Copy(pIMem, key, base + i * size, size);
-        j = i - 1;
-        while (j < nitems && compar(base + j * size, key) > 0) {
+        
+        j = (int)i - 1;
+        
+        while (j >= 0 && compar(base + j * size, key) > 0) {
             pIMem->pVTbl->Copy(pIMem, base + (j + 1) * size, base + j * size, size);
             
-            /* Событие: элемент сдвинут вправо */
             global_idx = (size_t)((base + (j + 1) * size) - global_base) / size;
-            CEcoLab1_Fire_OnPutElement(pCMe, (uint32_t)global_idx, base + j * size);
+            CEcoLab1_Fire_OnArrayChange(pCMe, (uint32_t)global_idx, base + j * size, global_base, (uint32_t)total_count);
 
             j--;
         }
         pIMem->pVTbl->Copy(pIMem, base + (j + 1) * size, key, size);
         
-        /* Событие: вставка ключа */
         global_idx = (size_t)((base + (j + 1) * size) - global_base) / size;
-        CEcoLab1_Fire_OnPutElement(pCMe, (uint32_t)global_idx, key);
+        CEcoLab1_Fire_OnArrayChange(pCMe, (uint32_t)global_idx, key, global_base, (uint32_t)total_count);
     }
     pIMem->pVTbl->Free(pIMem, key);
 }
 
-void merge(CEcoLab1* pCMe, IEcoMemoryAllocator1* pIMem, char* base, char* left, size_t left_size, char* right, size_t right_size, size_t size, int16_t (*compar)(const void*, const void*), char* global_base) {
+void merge(CEcoLab1* pCMe, IEcoMemoryAllocator1* pIMem, char* base, char* left, size_t left_size, char* right, size_t right_size, size_t size, int16_t (*compar)(const void*, const void*), char* global_base, size_t total_count) {
     size_t i = 0, j = 0, k = 0;
     size_t global_idx;
 
@@ -357,11 +358,11 @@ void merge(CEcoLab1* pCMe, IEcoMemoryAllocator1* pIMem, char* base, char* left, 
         
         if (compar(left + i * size, right + j * size) <= 0) {
             pIMem->pVTbl->Copy(pIMem, base + k * size, left + i * size, size);
-            CEcoLab1_Fire_OnPutElement(pCMe, (uint32_t)global_idx, left + i * size);
+            CEcoLab1_Fire_OnArrayChange(pCMe, (uint32_t)global_idx, left + i * size, global_base, (uint32_t)total_count);
             i++;
         } else {
             pIMem->pVTbl->Copy(pIMem, base + k * size, right + j * size, size);
-            CEcoLab1_Fire_OnPutElement(pCMe, (uint32_t)global_idx, right + j * size);
+            CEcoLab1_Fire_OnArrayChange(pCMe, (uint32_t)global_idx, right + j * size, global_base, (uint32_t)total_count);
             j++;
         }
         k++;
@@ -369,14 +370,14 @@ void merge(CEcoLab1* pCMe, IEcoMemoryAllocator1* pIMem, char* base, char* left, 
     while (i < left_size) {
         global_idx = (size_t)((base + k * size) - global_base) / size;
         pIMem->pVTbl->Copy(pIMem, base + k * size, left + i * size, size);
-        CEcoLab1_Fire_OnPutElement(pCMe, (uint32_t)global_idx, left + i * size);
+        CEcoLab1_Fire_OnArrayChange(pCMe, (uint32_t)global_idx, left + i * size, global_base, (uint32_t)total_count);
         i++;
         k++;
     }
     while (j < right_size) {
         global_idx = (size_t)((base + k * size) - global_base) / size;
         pIMem->pVTbl->Copy(pIMem, base + k * size, right + j * size, size);
-        CEcoLab1_Fire_OnPutElement(pCMe, (uint32_t)global_idx, right + j * size);
+        CEcoLab1_Fire_OnArrayChange(pCMe, (uint32_t)global_idx, right + j * size, global_base, (uint32_t)total_count);
         j++;
         k++;
     }
@@ -400,11 +401,10 @@ static int16_t ECOCALLMETHOD CEcoLab1_qsort(IEcoLab1Ptr_t me, void* base, size_t
 
     if (me == 0 || base == 0 || compar == 0) return -1;
 
-    /* Событие старта */
     CEcoLab1_Fire_OnProcessStart(pCMe, base, (uint32_t)nitems);
 
     for (i = 0; i < nitems; i += RUN) {
-        insertionSort(pCMe, pCMe->m_pIMem, (char*)base + i * size, (i + RUN < nitems) ? RUN : (nitems - i), size, compar, (char*)base);
+        insertionSort(pCMe, pCMe->m_pIMem, (char*)base + i * size, (i + RUN < nitems) ? RUN : (nitems - i), size, compar, (char*)base, nitems);
     }
 
     for (len = RUN; len < nitems; len = 2 * len) {
@@ -421,7 +421,7 @@ static int16_t ECOCALLMETHOD CEcoLab1_qsort(IEcoLab1Ptr_t me, void* base, size_t
                 pCMe->m_pIMem->pVTbl->Copy(pCMe->m_pIMem, left, (char*)base + i * size, left_size * size);
                 pCMe->m_pIMem->pVTbl->Copy(pCMe->m_pIMem, right, (char*)base + (mid + 1) * size, right_size * size);
 
-                merge(pCMe, pCMe->m_pIMem, (char*)base + i * size, left, left_size, right, right_size, size, compar, (char*)base);
+                merge(pCMe, pCMe->m_pIMem, (char*)base + i * size, left, left_size, right, right_size, size, compar, (char*)base, nitems);
 
                 pCMe->m_pIMem->pVTbl->Free(pCMe->m_pIMem, left);
                 pCMe->m_pIMem->pVTbl->Free(pCMe->m_pIMem, right);

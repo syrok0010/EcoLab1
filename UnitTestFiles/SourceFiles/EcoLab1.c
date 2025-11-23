@@ -103,6 +103,7 @@ int16_t EcoMain(IEcoUnknown* pIUnk) {
 	uint32_t cAdvise2 = 0;
     
 	/* Тестовые наборы данных */
+    int demoArr[] = { 20, 5, 10, 1, 15 };
     int arr_random[] = { 5, 2, 8, 1, 9, 4 };
     int arr_sorted[] = { 1, 2, 4, 5, 8, 9 };
     int arr_reversed[] = { 9, 8, 5, 4, 2, 1 };
@@ -216,6 +217,29 @@ int16_t EcoMain(IEcoUnknown* pIUnk) {
             }
         }
     }
+
+	printf("\n\n=== LAB 3 DEMO START: Event Logging ===\n");
+    printf("Sorting array: { 20, 5, 10, 1, 15 }\n");
+    
+
+    pIEcoLab1->pVTbl->qsort(pIEcoLab1, demoArr, 5, sizeof(int), comp_int);
+    
+    print_array("Demo Result", demoArr, 5);
+    printf("=== LAB 3 DEMO END ===\n\n");
+    printf("Events demonstrated. Press ENTER to run performance tests...\n");
+    getchar();
+    
+    if (pICP != 0) {
+        if (cAdvise != 0) {
+            pICP->pVTbl->Unadvise(pICP, cAdvise);
+            cAdvise = 0;
+        }
+        if (cAdvise2 != 0) {
+            pICP->pVTbl->Unadvise(pICP, cAdvise2);
+            cAdvise2 = 0;
+        }
+    }
+    printf("Sinks disconnected. Starting heavy tests...\n");
 
     printf("--- Functional Tests ---\n");
 

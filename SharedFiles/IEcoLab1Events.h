@@ -41,9 +41,7 @@ typedef struct IEcoLab1VTblEvents {
 
     /* IEcoLab1Events */
     int16_t (ECOCALLMETHOD *OnProcessStart)(/* in */ struct IEcoLab1Events* me, /* in */ const void* start_ptr, /* in */ uint32_t count);
-
-    int16_t (ECOCALLMETHOD *OnPutElement)(/* in */ struct IEcoLab1Events* me, /* in */ uint32_t index, /* in */ const void* val_ptr);
-
+    int16_t (ECOCALLMETHOD *OnArrayChange)(/* in */ struct IEcoLab1Events* me, /* in */ uint32_t index, /* in */ const void* val_ptr, /* in */ const void* arr_ptr, /* in */ uint32_t count);
 } IEcoLab1VTblEvents, *IEcoLab1VTblEventsPtr;
 
 interface IEcoLab1Events {

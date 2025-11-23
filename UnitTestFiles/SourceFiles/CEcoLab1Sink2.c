@@ -100,12 +100,26 @@ uint32_t ECOCALLMETHOD CEcoLab1Sink2_Release(/* in */ struct IEcoLab1Events* me)
 }
 
 int16_t ECOCALLMETHOD CEcoLab1Sink2_OnProcessStart(/* in */ struct IEcoLab1Events* me, /* in */ const void* start_ptr, /* in */ uint32_t count) {
-    return 0;
+    printf("[Sink 2: Visualizer] Visualizer is listening");
+	return 0;
 }
 
-int16_t ECOCALLMETHOD CEcoLab1Sink2_OnPutElement(/* in */ struct IEcoLab1Events* me, /* in */ uint32_t index, /* in */ const void* val_ptr) {
+int16_t ECOCALLMETHOD CEcoLab1Sink2_OnArrayChange(struct IEcoLab1Events* me, uint32_t index, const void* val_ptr, const void* arr_ptr, uint32_t count) {
+    CEcoLab1Sink2* pCMe = (CEcoLab1Sink2*)me;
+    const int* full_array = (const int*)arr_ptr;
     const int* val = (const int*)val_ptr;
-    printf("    [Sink 2: Visualizer] Update index %d -> Value %d\n", index, *val);
+    uint32_t i;
+
+    printf("[Sink 2: Visualizer] Update [%d]=%d -> [ ", index, *val);
+    for (i = 0; i < count; i++) {
+        if (i == index) {
+            printf("*%d* ", full_array[i]);
+        } else {
+            printf("%d ", full_array[i]);
+        }
+    }
+    printf("]\n");
+
     return 0;
 }
 
@@ -178,9 +192,9 @@ int16_t ECOCALLMETHOD CEcoLab1Sink2_Unadvise(/* in */ struct CEcoLab1Sink2* me, 
 IEcoLab1VTblEvents g_x2D2E3B9214F248A6A09ECB494B58C795VTblEvents = {
     CEcoLab1Sink2_QueryInterface,
     CEcoLab1Sink2_AddRef,
-    CEcoLab1Sink2_Release,
-    CEcoLab1Sink2_OnProcessStart,
-    CEcoLab1Sink2_OnPutElement
+    CEcoLab1Sink2_Release,    
+		CEcoLab1Sink2_OnProcessStart,
+    CEcoLab1Sink2_OnArrayChange
 };
 
 /*

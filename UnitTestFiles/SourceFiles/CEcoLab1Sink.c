@@ -104,7 +104,8 @@ int16_t ECOCALLMETHOD CEcoLab1Sink_OnProcessStart(/* in */ struct IEcoLab1Events
     return 0;
 }
 
-int16_t ECOCALLMETHOD CEcoLab1Sink_OnPutElement(/* in */ struct IEcoLab1Events* me, /* in */ uint32_t index, /* in */ const void* val_ptr) {
+int16_t ECOCALLMETHOD CEcoLab1Sink_OnArrayChange(struct IEcoLab1Events* me, uint32_t index, const void* val_ptr, const void* arr_ptr, uint32_t count) {
+    printf("[Sink 1: Logger] Array changed\n");
     return 0;
 }
 
@@ -179,7 +180,7 @@ IEcoLab1VTblEvents g_x2D2E3B9214F248A6A09ECB494B59C795VTblEvents = {
     CEcoLab1Sink_AddRef,
     CEcoLab1Sink_Release,
     CEcoLab1Sink_OnProcessStart,
-    CEcoLab1Sink_OnPutElement
+    CEcoLab1Sink_OnArrayChange
 };
 
 /*
